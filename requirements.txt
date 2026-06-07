@@ -1,0 +1,6 @@
+MONGO_URI=mongodb+srv://mozaicteck:Mozaic1996@mozaicdb.f93jo2t.mongodb.net/mozaicdb?retryWrites=true&w=majority
+QWEN_API_KEY=sk-ws-H.IIHMER.7qbG.MEQCIA3rpEvbiwRaj68anQecxlNqde88zMfMFkIAtdoskSlmAiBLKBlzJJnelaKSp7yugHyf53BafPlHgxNRKv_d_PLTbQ
+SECRET_KEY=naviiq_secret_key_2026
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=7
