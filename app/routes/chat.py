@@ -10,6 +10,7 @@ from app.routes.auth import get_current_student
 from datetime import datetime
 from bson import ObjectId
 import logging
+import secrets
 
 logger = logging.getLogger(__name__)
 
@@ -28,28 +29,20 @@ async def send_message(
     data: ChatMessage,
     student=Depends(get_current_student)
 ):
-    """
-    Main chat endpoint. Receives student message and returns agent response.
-    Handles session creation and state persistence.
-    """
     student_id = str(student["_id"])
     conversations = get_collection("conversations")
 
-    # Get or create session
     session_id = data.session_id
     existing_state = None
 
     if session_id:
-        # Load existing conversation state
         existing_conv = await conversations.find_one({
             "session_id": session_id,
             "student_id": student_id
         })
         if existing_conv:
             existing_state = existing_conv.get("state")
-
     else:
-        # Create new session
         session_id = str(ObjectId())
         await conversations.insert_one({
             "session_id": session_id,
@@ -59,7 +52,6 @@ async def send_message(
             "state": None
         })
 
-    # Run the agent
     result = await run_naviiq_agent(
         student_id=student_id,
         session_id=session_id,
@@ -67,7 +59,6 @@ async def send_message(
         existing_state=existing_state
     )
 
-    # Save updated state to MongoDB
     await conversations.update_one(
         {"session_id": session_id},
         {"$set": {
@@ -85,6 +76,87 @@ async def send_message(
         "is_complete": result["is_complete"]
     }
 
+# ─── GENERATE SHAREABLE LINK ───────────────────────────────
+
+@router.post("/share/{session_id}")
+async def generate_share_link(
+    session_id: str,
+    student=Depends(get_current_student)
+):
+    """
+    Generates a unique shareable link for a completed roadmap.
+    Only the student who owns the session can generate a link.
+    """
+    student_id = str(student["_id"])
+    recommendations = get_collection("recommendations")
+
+    # Find the recommendation for this session
+    recommendation = await recommendations.find_one({
+        "session_id": session_id,
+        "student_id": student_id
+    })
+
+    if not recommendation:
+        raise HTTPException(
+            status_code=404,
+            detail="No completed roadmap found for this session"
+        )
+
+    # Check if share token already exists
+    existing_token = recommendation.get("share_token")
+    if existing_token:
+        return {
+            "share_token": existing_token,
+            "share_url": f"/api/chat/roadmap/{existing_token}"
+        }
+
+    # Generate new unique token
+    share_token = secrets.token_urlsafe(16)
+
+    # Save token to recommendation
+    await recommendations.update_one(
+        {"session_id": session_id, "student_id": student_id},
+        {"$set": {
+            "share_token": share_token,
+            "shared_at": datetime.utcnow()
+        }}
+    )
+
+    return {
+        "share_token": share_token,
+        "share_url": f"/api/chat/roadmap/{share_token}"
+    }
+
+# ─── PUBLIC ROADMAP VIEW ───────────────────────────────────
+
+@router.get("/roadmap/{share_token}")
+async def view_shared_roadmap(share_token: str):
+    """
+    Public endpoint. No login required.
+    Returns roadmap data for anyone with the share token.
+    """
+    recommendations = get_collection("recommendations")
+
+    recommendation = await recommendations.find_one(
+        {"share_token": share_token}
+    )
+
+    if not recommendation:
+        raise HTTPException(
+            status_code=404,
+            detail="Roadmap not found or link is invalid"
+        )
+
+    return {
+        "matched_category": recommendation.get("matched_category"),
+        "student_mode": recommendation.get("student_mode"),
+        "roadmap_response": recommendation.get("roadmap_response"),
+        "confidence_score": recommendation.get("confidence_score"),
+        "infrastructure_adjusted": recommendation.get("infrastructure_adjusted"),
+        "status": recommendation.get("status"),
+        "shared_at": recommendation.get("shared_at")
+    }
+
 # ─── GET CONVERSATION HISTORY ──────────────────────────────
 
 @router.get("/history/{session_id}")
@@ -92,9 +164,6 @@ async def get_history(
     session_id: str,
     student=Depends(get_current_student)
 ):
-    """
-    Returns conversation history for a session.
-    """
     student_id = str(student["_id"])
     conversations = get_collection("conversations")
 
@@ -120,9 +189,6 @@ async def get_history(
 
 @router.get("/sessions")
 async def get_sessions(student=Depends(get_current_student)):
-    """
-    Returns all conversation sessions for the current student.
-    """
     student_id = str(student["_id"])
     conversations = get_collection("conversations")
 
