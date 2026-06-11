@@ -520,8 +520,8 @@ Be warm and encouraging."""
             "messages": [{"role": "assistant", "content": clarification}]
         }
 
-    # Confidence is high. Proceed to roadmap.
-    return {
+    # Confidence is high. Run roadmap generator immediately in same turn.
+    roadmap_state = {
         **state,
         "confidence_score": confidence_score,
         "matched_category": decision.get("matched_category", ""),
@@ -531,6 +531,7 @@ Be warm and encouraging."""
         "final_response": "",
         "messages": []
     }
+    return await roadmap_generator(roadmap_state)
 # ─── NODE 6: ROADMAP GENERATOR ─────────────────────────────
 # Final stage. Generates personalized learning roadmap.
 # Fetches matching careers from MongoDB.
@@ -575,26 +576,25 @@ Prioritize offline resources, downloadable content, and text based learning.
 Avoid recommending video heavy platforms as primary resources.
 """
 
-    system_prompt = """You are Naviiq, an expert AI career guidance system for African students.
+    system_prompt = """You are Naviiq, a career guidance AI for African students.
 
-You have analyzed the student and matched them to a career category.
-Now generate a warm, personalized, and actionable career guidance response.
+Based on the student profile and career recommendation below, write a personalized career guidance message.
 
-Your response must include:
-1. A warm congratulatory opening addressing the student by name
-2. The recommended career path and why it fits them specifically
-3. Top 3 specific roles they can grow into
-4. Required skills to learn in order
-5. A 30 day learning roadmap with weekly breakdown
-6. 2 beginner project ideas they can start immediately
-7. Free learning resources (prefer African accessible ones)
-8. An encouraging closing message
+Include:
+1. One sentence greeting using the student name
+2. Their recommended career path and why it fits them
+3. Top 3 roles they can grow into
+4. 5 key skills to learn in order
+5. A simple 4-week learning plan (one line per week)
+6. 2 beginner project ideas
+7. 2 free learning resources
+
+Keep the response focused and under 400 words.
 
 """ + infrastructure_note + """
 
 Student profile: """ + json.dumps(student_profile, indent=2) + """
-Career recommendation: """ + json.dumps(career_recommendation, indent=2) + """
-Available careers in matched category: """ + json.dumps(careers_data, indent=2)
+Career recommendation: """ + json.dumps(career_recommendation, indent=2)
 
     response = await call_qwen(
         system_prompt=system_prompt,
