@@ -604,6 +604,8 @@ Keep it under 400 words.
 
     system_prompt = """You are Naviiq, a career guidance AI for African students.
 
+""" + TONE_RULES + """
+
 """ + output_instructions + """
 
 """ + infrastructure_note + """
