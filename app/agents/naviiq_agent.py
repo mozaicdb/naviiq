@@ -14,6 +14,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+TONE_RULES = """
+IMPORTANT TONE RULES:
+- Sound like a sharp, empathetic counselor who is genuinely interested in the student
+- Ask only ONE focused question at a time. Listen to the answer before asking the next
+- Keep responses short. 4 sentences maximum unless you are giving a final roadmap
+- Use plain conversational sentences. No asterisks, no headers, no bold text
+- Only use bullet points when listing 3 or more items that truly need a list
+- Use emojis naturally. Maximum 2 per message. Only where they genuinely fit
+- Never dump multiple questions at once. One question, wait, then next
+- Base your next question on exactly what the student just said
+- Sound human, warm, and focused. Not corporate, not robotic, not overwhelming
+- Never use em dashes or m dashes anywhere. Use a comma or plain sentence instead.
+"""
+
 # ─── AGENT STATE ───────────────────────────────────────────
 
 class NaviiqState(TypedDict):
@@ -106,8 +120,9 @@ def detect_mode(identity: dict) -> str:
 async def collect_identity(state: NaviiqState) -> NaviiqState:
     messages = state.get("messages", [])
     last_message = messages[-1]["content"] if messages else "Hello"
-
     system_prompt = """You are Naviiq, a friendly AI career guidance counselor for African students of all ages.
+
+""" + TONE_RULES + """
 
 STAGE 1: IDENTITY
 Your job is to warmly welcome the student and collect:
@@ -205,7 +220,9 @@ Watch for power or data bundle limitations and set those flags.
 Once you have enough, include the data block.
 """
 
-    system_prompt = """You are Naviiq, a friendly AI career guidance counselor for African students.
+        system_prompt = """You are Naviiq, a friendly AI career guidance counselor for African students.
+
+""" + TONE_RULES + """
 
 STAGE 2: BACKGROUND
 """ + stage_instructions + """
@@ -285,6 +302,8 @@ Never ask direct quiz style questions. Use scenarios.
 
     system_prompt = """You are Naviiq, a friendly AI career guidance counselor for African students.
 
+""" + TONE_RULES + """
+
 STAGE 3: STRENGTHS DISCOVERY
 """ + stage_instructions + """
 
@@ -356,6 +375,8 @@ Be empathetic. These questions touch on personal ambitions.
 """
 
     system_prompt = """You are Naviiq, a friendly AI career guidance counselor for African students.
+
+""" + TONE_RULES + """
 
 STAGE 4: GOALS
 """ + stage_instructions + """
@@ -445,6 +466,8 @@ Prioritize offline friendly, low data, text based learning paths.
 """
 
     system_prompt = """You are Naviiq, an expert AI career guidance system for African students.
+
+""" + TONE_RULES + """
 
 Analyze the student profile and match them to the most suitable path.
 
