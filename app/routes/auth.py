@@ -7,6 +7,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from bson import ObjectId
 import secrets
+from app.utils import send_verification_email
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -78,14 +79,14 @@ async def register(data: StudentCreate):
     result = await students.insert_one(student_doc.model_dump())
     student_id = str(result.inserted_id)
     verify_token = create_email_token(student_id)
+    await send_verification_email(data.email, data.full_name, verify_token)
     return {
-        "message": "Registration successful. Please verify your email.",
-        "verify_token": verify_token
+        "message": "Registration successful. Please check your email to verify your account."
     }
 
 # ─── VERIFY EMAIL ──────────────────────────────────────────
 
-@router.post("/verify-email")
+@router.get("/verify-email")
 async def verify_email(token: str):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

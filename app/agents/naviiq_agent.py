@@ -702,9 +702,28 @@ async def run_naviiq_agent(
     node_func = node_map.get(current_stage, collect_identity)
     updated_state = await node_func(state)
 
+    share_token = None
+    if updated_state.get("is_complete"):
+        try:
+            recommendations = get_collection("recommendations")
+            rec = await recommendations.find_one({"session_id": session_id})
+            if rec:
+                share_token = rec.get("share_token")
+                if not share_token:
+                    import secrets
+                    share_token = secrets.token_urlsafe(16)
+                    await recommendations.update_one(
+                        {"session_id": session_id},
+                        {"$set": {"share_token": share_token}}
+                    )
+        except Exception as e:
+            logger.error(f"Error fetching share token: {e}")
+
     return {
         "response": updated_state.get("final_response", ""),
         "current_stage": updated_state.get("current_stage", "identity"),
         "is_complete": updated_state.get("is_complete", False),
+        "roadmap_complete": updated_state.get("is_complete", False),
+        "share_token": share_token,
         "state": updated_state
     }

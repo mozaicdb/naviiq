@@ -73,7 +73,9 @@ async def send_message(
         "session_id": session_id,
         "response": result["response"],
         "current_stage": result["current_stage"],
-        "is_complete": result["is_complete"]
+        "is_complete": result["is_complete"],
+        "roadmap_complete": result.get("roadmap_complete", False),
+        "share_token": result.get("share_token")
     }
 
 # ─── GENERATE SHAREABLE LINK ───────────────────────────────

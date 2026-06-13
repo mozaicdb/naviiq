@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     EMAIL_VERIFY_TOKEN_EXPIRE_MINUTES: int = 30
     MAX_LOGIN_ATTEMPTS: int = 5
 
+    # Email
+    BREVO_API_KEY: str
+    BREVO_SENDER_EMAIL: str
+
     # CORS
     ALLOWED_ORIGINS: list = [
         "http://localhost:5173",
