@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
 
@@ -15,6 +16,7 @@ function Register() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -112,15 +114,36 @@ function Register() {
 
           <div>
             <label className="text-sm font-medium text-[#0F172A] mb-1 block">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Create a password"
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Create a password"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563EB] pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B]"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+
+            <div className="mt-2 flex flex-col gap-1">
+              <p className={`text-xs ${formData.password.length >= 8 ? 'text-green-600' : 'text-[#94A3B8]'}`}>
+                {formData.password.length >= 8 ? '✓' : '○'} At least 8 characters
+              </p>
+              <p className={`text-xs ${/[0-9]/.test(formData.password) ? 'text-green-600' : 'text-[#94A3B8]'}`}>
+                {/[0-9]/.test(formData.password) ? '✓' : '○'} At least one number
+              </p>
+              <p className={`text-xs ${/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-[#94A3B8]'}`}>
+                {/[A-Z]/.test(formData.password) ? '✓' : '○'} At least one uppercase letter
+              </p>
+            </div>
           </div>
 
           <button
