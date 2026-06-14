@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 
@@ -12,6 +12,15 @@ function Login() {
   const [loading, setLoading] = useState(false)
   const registered = searchParams.get('registered')
   const email = searchParams.get('email')
+  const verified = searchParams.get('verified')
+  const [showBanner, setShowBanner] = useState(true)
+
+  useEffect(() => {
+    if (registered || verified) {
+      const timer = setTimeout(() => setShowBanner(false), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [registered, verified])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -40,9 +49,15 @@ function Login() {
         <h1 className="text-3xl font-bold text-[#0F172A] mb-2">Welcome back</h1>
         <p className="text-[#64748B] mb-6">Login to continue your journey.</p>
 
-        {registered && (
+        {showBanner && registered && (
           <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">
             Registration successful! We sent a verification link to {email}. Check your inbox before logging in.
+          </div>
+        )}
+
+        {showBanner && verified && (
+          <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">
+            Email verified successfully! You can now login.
           </div>
         )}
 

@@ -26,6 +26,7 @@ function VerifyEmail() {
     try {
       await axios.get(`${API_URL}/api/auth/verify-email?token=${token}`)
       setStatus('success')
+      setTimeout(() => navigate('/login?verified=true'), 2000)
     } catch (err) {
       const message = err.response?.data?.detail || ''
       console.log('Verify error:', message)
