@@ -87,6 +87,7 @@ async def call_qwen(system_prompt: str, user_message: str, conversation_history:
             raw = data["choices"][0]["message"]["content"]
             raw = raw.replace("\u2014", ",").replace("\u2013", ",").replace(" — ", ", ").replace(" – ", ", ")
             raw = re.sub(r'\*([^*]+)\*', r'\1', raw)
+            raw = re.sub(r'\*+', '', raw)
             return raw
 
     except httpx.TimeoutException:
@@ -327,8 +328,8 @@ The JSON block is hidden from the student."""
 
     # Use per-stage counter
     strengths_messages = state.get("strengths_message_count", 0)
-    if strengths_messages >= 3:
-        system_prompt += "\n\nIMPORTANT: You have collected enough information. You MUST include the [DATA] block with stage_complete: true in your next response. Do not ask any more questions."
+    if strengths_messages >= 2:
+        system_prompt += "\n\nCRITICAL INSTRUCTION: You MUST include the [DATA] block in this response. Extract thinking_style, work_preference, detail_orientation, and collaboration from the conversation so far. Set stage_complete to true. Do not ask any more questions."
 
     response = await call_qwen(
         system_prompt=system_prompt,
@@ -408,9 +409,8 @@ The JSON block is hidden from the student."""
 
     # Use per-stage counter
     goals_messages = state.get("goals_message_count", 0)
-    if goals_messages >= 3:
-        system_prompt += "\n\nIMPORTANT: You have collected enough information. You MUST include the [DATA] block with stage_complete: true in your next response. Do not ask any more questions."
-
+    if goals_messages >= 2:
+        system_prompt += "\n\nCRITICAL INSTRUCTION: You MUST include the [DATA] block in this response. Extract career_focus, market_focus, daily_time_available, device, and biggest_fear from the conversation so far. Set stage_complete to true. Do not ask any more questions."
     response = await call_qwen(
         system_prompt=system_prompt,
         user_message=last_message,
