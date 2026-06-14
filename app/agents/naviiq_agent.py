@@ -9,6 +9,7 @@ import operator
 from app.core.config import settings
 from app.db.database import get_collection
 import httpx
+import re
 import json
 import logging
 
@@ -28,7 +29,7 @@ IMPORTANT TONE RULES:
 - Never use em dashes or m dashes anywhere. Use a comma or plain sentence instead.
 """
 
-# ─── AGENT STATE ───────────────────────────────────────────
+# Agent State
 
 class NaviiqState(TypedDict):
     student_id: str
@@ -36,7 +37,7 @@ class NaviiqState(TypedDict):
     messages: Annotated[List, operator.add]
     current_stage: str
     stage_complete: bool
-    student_mode: str        # explorer, discovery, or career
+    student_mode: str
     identity: dict
     background: dict
     strengths: dict
@@ -49,13 +50,18 @@ class NaviiqState(TypedDict):
     has_data_issues: bool
     final_response: str
     is_complete: bool
+    clarification_count: int
+    identity_message_count: int
+    background_message_count: int
+    strengths_message_count: int
+    goals_message_count: int
 
-# ─── QWEN API HELPER ───────────────────────────────────────
+# Qwen API Helper
 
 async def call_qwen(system_prompt: str, user_message: str, conversation_history: list = []) -> str:
     try:
         messages = []
-        for msg in conversation_history[-4:]:
+        for msg in conversation_history[-10:]:
             messages.append(msg)
         messages.append({"role": "user", "content": user_message})
 
@@ -78,7 +84,10 @@ async def call_qwen(system_prompt: str, user_message: str, conversation_history:
             )
             response.raise_for_status()
             data = response.json()
-            return data["choices"][0]["message"]["content"]
+            raw = data["choices"][0]["message"]["content"]
+            raw = raw.replace("\u2014", ",").replace("\u2013", ",").replace(" — ", ", ").replace(" – ", ", ")
+            raw = re.sub(r'\*([^*]+)\*', r'\1', raw)
+            return raw
 
     except httpx.TimeoutException:
         logger.error("Qwen API timeout")
@@ -87,15 +96,9 @@ async def call_qwen(system_prompt: str, user_message: str, conversation_history:
         logger.error(f"Qwen API error: {e}")
         return "I encountered an error. Please try again."
 
-# ─── MODE DETECTOR ─────────────────────────────────────────
+# Mode Detector
 
 def detect_mode(identity: dict) -> str:
-    """
-    Detects which mode to use based on age and school level.
-    Explorer: under 13
-    Discovery: 13 to 17 or secondary school
-    Career: 18 and above or university/graduate/working
-    """
     age = identity.get("age")
     school_level = identity.get("school_level", "")
 
@@ -115,11 +118,12 @@ def detect_mode(identity: dict) -> str:
     else:
         return "career"
 
-# ─── NODE 1: COLLECT IDENTITY ──────────────────────────────
+# Node 1: Collect Identity
 
 async def collect_identity(state: NaviiqState) -> NaviiqState:
     messages = state.get("messages", [])
     last_message = messages[-1]["content"] if messages else "Hello"
+
     system_prompt = """You are Naviiq, a friendly AI career guidance counselor for African students of all ages.
 
 """ + TONE_RULES + """
@@ -134,7 +138,7 @@ Rules:
 - Be warm, friendly and conversational
 - Ask one or two questions at a time maximum
 - If the student already provided some information, acknowledge it and ask for what is missing
-- Once you have all three pieces of information, include a JSON block at the end of your response in this exact format:
+- Once you have the student's name and age, include a JSON block. Do not ask for information already given in previous messages. Extract from the full conversation history.
 
 [DATA]{"name": "value", "age": number_or_null, "school_level": "primary|secondary|university|graduate|working|interested", "stage_complete": true}[/DATA]
 
@@ -143,13 +147,16 @@ Rules:
 
 Current information collected: """ + json.dumps(state.get("identity", {}))
 
+    identity_messages = state.get("identity_message_count", 0)
+    if identity_messages >= 2:
+        system_prompt += "\n\nIMPORTANT: You have enough information. Extract the name and age from the conversation and include the [DATA] block with stage_complete: true now."
+
     response = await call_qwen(
         system_prompt=system_prompt,
         user_message=last_message,
         conversation_history=messages[:-1]
     )
 
-    # Extract data block if present
     identity = state.get("identity", {})
     stage_complete = False
     student_mode = state.get("student_mode", "career")
@@ -169,22 +176,22 @@ Current information collected: """ + json.dumps(state.get("identity", {}))
         except:
             pass
 
-    # Clean response shown to student
     clean_response = response
     if "[DATA]" in clean_response:
         clean_response = clean_response.split("[DATA]")[0].strip()
 
     return {
-        **state,
-        "identity": identity,
-        "student_mode": student_mode,
-        "current_stage": "background" if stage_complete else "identity",
-        "stage_complete": stage_complete,
-        "final_response": clean_response,
-        "messages": [{"role": "assistant", "content": clean_response}]
-    }
+    **state,
+    "identity": identity,
+    "student_mode": student_mode,
+    "current_stage": "background" if stage_complete else "identity",
+    "stage_complete": stage_complete,
+    "final_response": clean_response,
+    "identity_message_count": state.get("identity_message_count", 0) + 1,
+    "messages": [{"role": "assistant", "content": clean_response}]
+}
 
-# ─── NODE 2: COLLECT BACKGROUND ────────────────────────────
+# Node 2: Collect Background
 
 async def collect_background(state: NaviiqState) -> NaviiqState:
     messages = state.get("messages", [])
@@ -220,7 +227,7 @@ Watch for power or data bundle limitations and set those flags.
 Once you have enough, include the data block.
 """
 
-        system_prompt = """You are Naviiq, a friendly AI career guidance counselor for African students.
+    system_prompt = """You are Naviiq, a friendly AI career guidance counselor for African students.
 
 """ + TONE_RULES + """
 
@@ -234,6 +241,11 @@ When stage is complete, include this JSON block at the end:
 [DATA]{"subjects_liked": [], "tech_experience": "value", "free_time_activities": "value", "wants_to_switch": false, "has_power_issues": false, "has_data_issues": false, "stage_complete": true}[/DATA]
 
 The JSON block is hidden from the student."""
+
+    # Use per-stage counter to avoid forcing completion too early
+    background_messages = state.get("background_message_count", 0)
+    if background_messages >= 3:
+        system_prompt += "\n\nIMPORTANT: You have collected enough information. You MUST include the [DATA] block with stage_complete: true in your next response. Do not ask any more questions."
 
     response = await call_qwen(
         system_prompt=system_prompt,
@@ -269,10 +281,11 @@ The JSON block is hidden from the student."""
         "current_stage": "strengths" if stage_complete else "background",
         "stage_complete": stage_complete,
         "final_response": clean_response,
+        "background_message_count": state.get("background_message_count", 0) + 1,
         "messages": [{"role": "assistant", "content": clean_response}]
     }
 
-# ─── NODE 3: ANALYZE STRENGTHS ─────────────────────────────
+# Node 3: Analyze Strengths
 
 async def analyze_strengths(state: NaviiqState) -> NaviiqState:
     messages = state.get("messages", [])
@@ -315,6 +328,11 @@ When stage is complete, include this JSON block at the end:
 
 The JSON block is hidden from the student."""
 
+    # Use per-stage counter
+    strengths_messages = state.get("strengths_message_count", 0)
+    if strengths_messages >= 3:
+        system_prompt += "\n\nIMPORTANT: You have collected enough information. You MUST include the [DATA] block with stage_complete: true in your next response. Do not ask any more questions."
+
     response = await call_qwen(
         system_prompt=system_prompt,
         user_message=last_message,
@@ -343,10 +361,11 @@ The JSON block is hidden from the student."""
         "current_stage": "goals" if stage_complete else "strengths",
         "stage_complete": stage_complete,
         "final_response": clean_response,
+        "strengths_message_count": state.get("strengths_message_count", 0) + 1,
         "messages": [{"role": "assistant", "content": clean_response}]
     }
 
-# ─── NODE 4: DEFINE GOALS ──────────────────────────────────
+# Node 4: Define Goals
 
 async def define_goals(state: NaviiqState) -> NaviiqState:
     messages = state.get("messages", [])
@@ -390,6 +409,11 @@ When stage is complete, include this JSON block at the end:
 
 The JSON block is hidden from the student."""
 
+    # Use per-stage counter
+    goals_messages = state.get("goals_message_count", 0)
+    if goals_messages >= 3:
+        system_prompt += "\n\nIMPORTANT: You have collected enough information. You MUST include the [DATA] block with stage_complete: true in your next response. Do not ask any more questions."
+
     response = await call_qwen(
         system_prompt=system_prompt,
         user_message=last_message,
@@ -418,10 +442,11 @@ The JSON block is hidden from the student."""
         "current_stage": "decision" if stage_complete else "goals",
         "stage_complete": stage_complete,
         "final_response": clean_response,
+        "goals_message_count": state.get("goals_message_count", 0) + 1,
         "messages": [{"role": "assistant", "content": clean_response}]
     }
 
-# ─── NODE 5: DECISION ENGINE ───────────────────────────────
+# Node 5: Decision Engine
 
 async def decision_engine(state: NaviiqState) -> NaviiqState:
     student_mode = state.get("student_mode", "career")
@@ -490,8 +515,6 @@ Return JSON only:
     "infrastructure_adjusted": true or false
 }"""
 
-    messages = state.get("messages", [])
-
     response = await call_qwen(
         system_prompt=system_prompt,
         user_message="Analyze this student profile and return your decision as JSON.",
@@ -508,7 +531,7 @@ Return JSON only:
             "confidence_score": 50,
             "needs_more_info": True,
             "missing_info": "Could not parse profile clearly",
-            "matched_category": "",
+            "matched_category": "Software Development",
             "reasoning": "",
             "top_roles": [],
             "infrastructure_adjusted": False
@@ -518,6 +541,22 @@ Return JSON only:
     needs_more_info = decision.get("needs_more_info", True)
 
     if needs_more_info or confidence_score < 70:
+        clarification_count = state.get("clarification_count", 0)
+
+        # After 2 clarifications force proceed to roadmap
+        if clarification_count >= 2:
+            roadmap_state = {
+                **state,
+                "confidence_score": max(confidence_score, 70),
+                "matched_category": decision.get("matched_category", "Software Development"),
+                "career_recommendation": decision,
+                "current_stage": "roadmap",
+                "stage_complete": True,
+                "final_response": "",
+                "messages": []
+            }
+            return await roadmap_generator(roadmap_state)
+
         clarification_prompt = f"""You need more information from the student.
 Missing: {decision.get('missing_info', 'some details')}
 Ask one clear friendly question to get this information.
@@ -531,6 +570,7 @@ Match your language to the student mode: {student_mode}"""
         return {
             **state,
             "confidence_score": confidence_score,
+            "clarification_count": clarification_count + 1,
             "current_stage": "decision",
             "stage_complete": False,
             "final_response": clarification,
@@ -549,7 +589,7 @@ Match your language to the student mode: {student_mode}"""
     }
     return await roadmap_generator(roadmap_state)
 
-# ─── NODE 6: ROADMAP GENERATOR ─────────────────────────────
+# Node 6: Roadmap Generator
 
 async def roadmap_generator(state: NaviiqState) -> NaviiqState:
     student_mode = state.get("student_mode", "career")
@@ -649,7 +689,7 @@ Recommendation details: """ + json.dumps(career_recommendation, indent=2)
         "messages": [{"role": "assistant", "content": response}]
     }
 
-# ─── GRAPH BUILDER ─────────────────────────────────────────
+# Graph Builder
 
 def build_naviiq_graph():
     graph = StateGraph(NaviiqState)
@@ -674,7 +714,7 @@ def build_naviiq_graph():
     logger.info("Naviiq agent graph compiled successfully")
     return compiled_graph
 
-# ─── AGENT RUNNER ──────────────────────────────────────────
+# Agent Runner
 
 async def run_naviiq_agent(
     student_id: str,
@@ -702,7 +742,12 @@ async def run_naviiq_agent(
             has_power_issues=False,
             has_data_issues=False,
             final_response="",
-            is_complete=False
+            is_complete=False,
+            clarification_count=0,
+            identity_message_count=0,
+            background_message_count=0,
+            strengths_message_count=0,
+            goals_message_count=0
         )
     else:
         state = {
