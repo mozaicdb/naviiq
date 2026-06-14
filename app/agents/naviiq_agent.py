@@ -138,19 +138,16 @@ Rules:
 - Be warm, friendly and conversational
 - Ask one or two questions at a time maximum
 - If the student already provided some information, acknowledge it and ask for what is missing
-- Once you have the student's name and age, include a JSON block. Do not ask for information already given in previous messages. Extract from the full conversation history.
+- Once you have the student's name and age, include the [DATA] block immediately. Do not ask for information already given. Extract from the full conversation history.
+- Set school_level based on anything they mentioned. If unclear, default to "graduate".
+- The JSON block is hidden from the student.
 
 [DATA]{"name": "value", "age": number_or_null, "school_level": "primary|secondary|university|graduate|working|interested", "stage_complete": true}[/DATA]
-
-- If you do not have all three pieces yet, do not include the JSON block
-- The JSON block is hidden from the student. Only include it when stage is complete.
-
 Current information collected: """ + json.dumps(state.get("identity", {}))
 
     identity_messages = state.get("identity_message_count", 0)
-    if identity_messages >= 2:
-        system_prompt += "\n\nIMPORTANT: You have enough information. Extract the name and age from the conversation and include the [DATA] block with stage_complete: true now."
-
+    if identity_messages >= 1:
+        system_prompt += "\n\nCRITICAL INSTRUCTION: You MUST include the [DATA] block in this response. The student has given their name and age. Extract them now and set stage_complete to true. Do not ask any more questions. End your response with the [DATA] block."
     response = await call_qwen(
         system_prompt=system_prompt,
         user_message=last_message,
@@ -657,9 +654,16 @@ Recommendation details: """ + json.dumps(career_recommendation, indent=2)
 
     response = await call_qwen(
         system_prompt=system_prompt,
-        user_message="Generate the personalized guidance for this student.",
+        user_message="Generate the personalized guidance for this student. Do not ask any questions at the end. End with an encouraging closing sentence only.",
         conversation_history=[]
     )
+
+    # Strip any question Qwen appends after the roadmap
+    if "?" in response:
+        parts = response.rsplit("?", 1)
+        last_sentence_start = parts[0].rfind("\n")
+        if last_sentence_start != -1:
+            response = parts[0][:last_sentence_start].strip()
 
     try:
         recommendations = get_collection("recommendations")
