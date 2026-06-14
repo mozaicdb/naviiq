@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -18,6 +18,15 @@ class StudentCreate(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
     password: str = Field(..., min_length=8)
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one number')
+        return v
     school_level: SchoolLevel
     age: Optional[int] = Field(None, ge=10, le=60)
     state: Optional[str] = None
