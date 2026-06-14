@@ -45,11 +45,18 @@ function Chat() {
   const updateNode = (stage) => {
     const stageMap = {
       collect_identity: 0,
+      identity: 0,
       collect_background: 1,
+      background: 1,
       analyze_strengths: 2,
+      strengths: 2,
       define_goals: 3,
+      goals: 3,
       decision_engine: 4,
+      decision: 4,
       roadmap_generator: 5,
+      roadmap: 5,
+      completed: 5,
     }
     const index = stageMap[stage]
     if (index !== undefined && index !== currentNode) {
