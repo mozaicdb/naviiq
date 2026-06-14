@@ -29,7 +29,7 @@ function Register() {
         ...formData,
         age: parseInt(formData.age),
       })
-      navigate('/login?registered=true')
+      navigate('/login?registered=true&email=' + formData.email)
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed. Try again.')
     } finally {

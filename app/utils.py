@@ -2,7 +2,7 @@ import httpx
 from app.core.config import settings
 
 async def send_verification_email(email: str, full_name: str, token: str):
-    verification_url = f"http://localhost:8000/api/auth/verify-email?token={token}"
+    verification_url = f"http://localhost:5173/verify-email?token={token}"
     
     payload = {
         "sender": {

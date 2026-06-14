@@ -96,11 +96,16 @@ async def verify_email(token: str):
     except JWTError:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
     students = get_collection("students")
+    student = await students.find_one({"_id": ObjectId(student_id)})
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    if student.get("is_verified"):
+        raise HTTPException(status_code=400, detail="Email already verified. Please login.")
     await students.update_one(
         {"_id": ObjectId(student_id)},
         {"$set": {"is_verified": True, "updated_at": datetime.utcnow()}}
     )
-    return {"message": "Email verified successfully"}
+    return {"message": "Email verified successfully. You can now login."}
 
 # ─── LOGIN ─────────────────────────────────────────────────
 

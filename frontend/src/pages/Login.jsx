@@ -1,14 +1,17 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 
 const API_URL = 'http://localhost:8000'
 
 function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const registered = searchParams.get('registered')
+  const email = searchParams.get('email')
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -36,6 +39,12 @@ function Login() {
 
         <h1 className="text-3xl font-bold text-[#0F172A] mb-2">Welcome back</h1>
         <p className="text-[#64748B] mb-6">Login to continue your journey.</p>
+
+        {registered && (
+          <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">
+            Registration successful! We sent a verification link to {email}. Check your inbox before logging in.
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
