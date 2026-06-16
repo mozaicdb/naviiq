@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Chat from './pages/Chat'
 import Roadmap from './pages/Roadmap'
 import VerifyEmail from './pages/VerifyEmail'
+import AuthCallback from './pages/AuthCallback'
 
 const API_URL = 'http://localhost:8000'
 
@@ -34,6 +35,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/roadmap/:shareToken" element={<Roadmap />} />
       </Routes>

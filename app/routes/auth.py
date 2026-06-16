@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Response, Request, Depends
+from fastapi.responses import RedirectResponse
 from app.models.student import StudentCreate, StudentLogin, StudentResponse, StudentInDB, TokenResponse
 from app.db.database import get_collection
 from app.core.config import settings
@@ -7,6 +8,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from bson import ObjectId
 import secrets
+import httpx
 from app.utils import send_verification_email
 
 router = APIRouter()
@@ -244,3 +246,87 @@ async def reset_password(token: str, new_password: str):
         }}
     )
     return {"message": "Password reset successful"}
+
+# --- GOOGLE OAuth ---
+
+@router.get("/google/login")
+async def google_login():
+    google_auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth"
+        f"?client_id={settings.GOOGLE_CLIENT_ID}"
+        f"&redirect_uri={settings.GOOGLE_REDIRECT_URI}"
+        "&response_type=code"
+        "&scope=openid email profile"
+        "&access_type=offline"
+    )
+    return {"url": google_auth_url}
+
+@router.get("/google/callback")
+async def google_callback(code: str, response: Response):
+    async with httpx.AsyncClient() as client:
+        token_res = await client.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+                "grant_type": "authorization_code"
+            }
+        )
+        token_data = token_res.json()
+        access_token_google = token_data.get("access_token")
+        user_res = await client.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {access_token_google}"}
+        )
+        user_info = user_res.json()
+
+    email = user_info.get("email")
+    full_name = user_info.get("name")
+
+    students = get_collection("students")
+    student = await students.find_one({"email": email})
+
+    if not student:
+        student_doc = {
+            "full_name": full_name,
+            "email": email,
+            "passwordHash": None,
+            "auth_provider": "google",
+            "is_verified": True,
+            "is_locked": False,
+            "failed_attempts": 0,
+            "school_level": None,
+            "age": None,
+            "state": None,
+            "plan": "free",
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        result = await students.insert_one(student_doc)
+        student_id = str(result.inserted_id)
+    else:
+        student_id = str(student["_id"])
+
+    access_token = create_access_token(student_id)
+    refresh_token = create_refresh_token(student_id)
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        samesite="lax",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    )
+
+    return RedirectResponse(
+        url=f"http://localhost:5173/auth/callback?access_token={access_token}&refresh_token={refresh_token}"
+    )

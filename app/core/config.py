@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     BREVO_API_KEY: str
     BREVO_SENDER_EMAIL: str
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: str
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/auth/google/callback"
     # CORS
     ALLOWED_ORIGINS: list = [
         "http://localhost:5173",

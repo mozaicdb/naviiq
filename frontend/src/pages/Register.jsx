@@ -155,6 +155,24 @@ function Register() {
           </button>
         </form>
 
+        <div className="mt-6">
+          <div className="relative flex items-center justify-center mb-4">
+            <div className="border-t border-gray-200 w-full"></div>
+            <span className="bg-white px-3 text-sm text-[#64748B] absolute">or</span>
+          </div>
+
+          <button
+            onClick={async () => {
+              const res = await axios.get(`${API_URL}/api/auth/google/login`)
+              window.location.href = res.data.url
+            }}
+            className="w-full py-3 border border-gray-200 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-50 transition-all cursor-pointer"
+          >
+            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+            <span className="text-sm font-medium text-[#0F172A]">Continue with Google</span>
+          </button>
+        </div>
+
         <p className="text-center text-sm text-[#64748B] mt-6">
           Already have an account?{' '}
           <Link to="/login" className="text-[#2563EB] font-medium hover:underline">
