@@ -1,3 +1,4 @@
+```markdown
 # Naviiq
 
 Naviiq is an AI-powered career guidance agent built for African students. It has a natural conversation with a student, learns about their background, interests, strengths, and goals, then generates a personalized career roadmap they can save, download, and share.
@@ -10,24 +11,24 @@ Many African students, especially in underserved communities, do not have access
 
 The agent supports three conversation modes depending on the student's age:
 
-- **Explorer** (under 13) — simple, encouraging, exploratory questions
-- **Discovery** (13–17) — guidance focused on subjects, interests, and early direction
-- **Career** (18+) — deeper conversation focused on career paths, skills, and concrete next steps
+- **Explorer** (under 13): simple, encouraging, exploratory questions
+- **Discovery** (13 to 17): guidance focused on subjects, interests, and early direction
+- **Career** (18+): deeper conversation focused on career paths, skills, and concrete next steps
 
 ## How It Works
 
 Naviiq is powered by a 6-node LangGraph agent. Each node has a single responsibility, gathers information through conversation, and hands off to the next node until enough context is built to generate a roadmap.
 
 ```
-collect_identity → collect_background → analyze_strengths → define_goals → decision_engine → roadmap_generator
+collect_identity to collect_background to analyze_strengths to define_goals to decision_engine to roadmap_generator
 ```
 
-- **collect_identity** — gathers name, age, and current school/work status
-- **collect_background** — explores academic background and areas of interest
-- **analyze_strengths** — identifies the student's natural strengths and working style
-- **define_goals** — understands what the student wants to achieve and their constraints
-- **decision_engine** — matches the student's profile against career paths and computes a confidence score
-- **roadmap_generator** — generates the final personalized roadmap once confidence is high enough (70% or above)
+- **collect_identity**: gathers name, age, and current school/work status
+- **collect_background**: explores academic background and areas of interest
+- **analyze_strengths**: identifies the student's natural strengths and working style
+- **define_goals**: understands what the student wants to achieve and their constraints
+- **decision_engine**: matches the student's profile against career paths and computes a confidence score
+- **roadmap_generator**: generates the final personalized roadmap once confidence is high enough (70% or above)
 
 Each node makes a single call to **Qwen3.7-Plus** via Qwen Cloud, using the conversation history and accumulated state to produce both a natural response and structured data used to track progress.
 
@@ -145,4 +146,3 @@ This project is licensed under the MIT License.
 
 Built by Moses Abiodun Iluyemi as part of the Global AI Hackathon with Qwen Cloud.
 ```
-
