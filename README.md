@@ -1,4 +1,3 @@
-```markdown
 # Naviiq
 
 Naviiq is an AI-powered career guidance agent built for African students. It has a natural conversation with a student, learns about their background, interests, strengths, and goals, then generates a personalized career roadmap they can save, download, and share.
@@ -145,4 +144,3 @@ This project is licensed under the MIT License.
 ## Author
 
 Built by Moses Abiodun Iluyemi as part of the Global AI Hackathon with Qwen Cloud.
-```
