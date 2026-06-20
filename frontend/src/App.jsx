@@ -8,6 +8,8 @@ import Chat from './pages/Chat'
 import Roadmap from './pages/Roadmap'
 import VerifyEmail from './pages/VerifyEmail'
 import AuthCallback from './pages/AuthCallback'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 const API_URL = 'http://localhost:8000'
 
@@ -36,8 +38,10 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-        <Route path="/roadmap/:shareToken" element={<Roadmap />} />
+        <Route path="/roadmap/:shareToken" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   )

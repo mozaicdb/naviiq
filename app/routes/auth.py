@@ -9,7 +9,7 @@ from passlib.context import CryptContext
 from bson import ObjectId
 import secrets
 import httpx
-from app.utils import send_verification_email
+from app.utils import send_verification_email, send_reset_email
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -219,9 +219,9 @@ async def forgot_password(email: str):
         {"sub": student_id, "type": "password_reset"},
         timedelta(minutes=30)
     )
+    await send_reset_email(email, student.get("full_name", "there"), reset_token)
     return {
-        "message": "Password reset token generated",
-        "reset_token": reset_token
+        "message": "If this email exists you will receive a reset link"
     }
 
 # ─── RESET PASSWORD ────────────────────────────────────────

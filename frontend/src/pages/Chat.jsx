@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import api from '../services/api'
 
 const API_URL = 'http://localhost:8000'
 
@@ -27,11 +27,7 @@ function Chat() {
 
   const startSession = async () => {
     try {
-      const res = await axios.post(
-        `${API_URL}/api/chat/message`,
-        { message: 'start' },
-        { withCredentials: true }
-      )
+      const res = await api.post('/api/chat/message', { message: 'start' })
       const data = res.data
       setSessionId(data.session_id)
       setMessages([{ role: 'ai', text: data.response }])
@@ -88,11 +84,7 @@ function Chat() {
     setLoading(true)
 
     try {
-      const res = await axios.post(
-        `${API_URL}/api/chat/message`,
-        { message: userText, session_id: sessionId },
-        { withCredentials: true }
-      )
+      const res = await api.post('/api/chat/message', { message: userText, session_id: sessionId })
       const data = res.data
       setMessages((prev) => [...prev, { role: 'ai', text: data.response }])
       if (data.quick_replies) setQuickReplies(data.quick_replies)
