@@ -2,7 +2,7 @@ import httpx
 from app.core.config import settings
 
 async def send_reset_email(email: str, full_name: str, token: str):
-    reset_url = f"http://localhost:5173/reset-password?token={token}"
+    reset_url = f"https://naviiq-frontend.onrender.com/reset-password?token={token}"
 
     payload = {
         "sender": {
@@ -39,7 +39,7 @@ async def send_reset_email(email: str, full_name: str, token: str):
 
 
 async def send_verification_email(email: str, full_name: str, token: str):
-    verification_url = f"http://localhost:5173/verify-email?token={token}"
+    verification_url = f"https://naviiq-frontend.onrender.com/verify-email?token={token}"
     
     payload = {
         "sender": {

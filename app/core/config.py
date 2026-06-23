@@ -35,11 +35,12 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/auth/google/callback"
+    GOOGLE_REDIRECT_URI: str = "https://naviiq.onrender.com/api/auth/google/callback"
     # CORS
     ALLOWED_ORIGINS: list = [
         "http://localhost:5173",
         "http://localhost:3000",
+        "https://naviiq-frontend.onrender.com",
     ]
 
     class Config:
