@@ -12,6 +12,7 @@ import httpx
 import re
 import json
 import logging
+from app.tools.web_search import search_web
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ class NaviiqState(TypedDict):
     background_message_count: int
     strengths_message_count: int
     goals_message_count: int
+    search_results: str
 
 # Qwen API Helper
 
@@ -574,11 +576,15 @@ Match your language to the student mode: {student_mode}"""
             "messages": [{"role": "assistant", "content": clarification}]
         }
 
+    search_query = f"{decision.get('matched_category', 'tech')} career salary jobs Nigeria Africa 2025"
+    search_results = search_web(search_query)
+
     roadmap_state = {
         **state,
         "confidence_score": confidence_score,
         "matched_category": decision.get("matched_category", ""),
         "career_recommendation": decision,
+        "search_results": search_results,
         "current_stage": "roadmap",
         "stage_complete": True,
         "final_response": "",
@@ -639,6 +645,9 @@ Include:
 Keep it under 400 words.
 """
 
+    search_results = state.get("search_results", "")
+    search_context = f"\nCurrent web data about this career path:\n{search_results}\n" if search_results else ""
+
     system_prompt = """You are Naviiq, a career guidance AI for African students.
 
 """ + TONE_RULES + """
@@ -650,7 +659,8 @@ Keep it under 400 words.
 Student name: """ + student_name + """
 Student profile: """ + json.dumps(student_profile, indent=2) + """
 Matched path: """ + matched_category + """
-Recommendation details: """ + json.dumps(career_recommendation, indent=2)
+Recommendation details: """ + json.dumps(career_recommendation, indent=2) + """
+""" + search_context
 
     response = await call_qwen(
         system_prompt=system_prompt,
@@ -751,7 +761,8 @@ async def run_naviiq_agent(
             identity_message_count=0,
             background_message_count=0,
             strengths_message_count=0,
-            goals_message_count=0
+            goals_message_count=0,
+            search_results=""
         )
     else:
         state = {
