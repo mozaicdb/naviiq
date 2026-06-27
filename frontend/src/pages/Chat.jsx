@@ -144,16 +144,18 @@ function Chat() {
             const parsed = JSON.parse(jsonStr)
             if (parsed.token) {
               aiText += parsed.token
+              const currentText = aiText
               if (!messageAdded) {
-                setMessages((prev) => [...prev, { role: 'ai', text: aiText }])
+                setMessages((prev) => [...prev, { role: 'ai', text: currentText }])
                 messageAdded = true
               } else {
                 setMessages((prev) => {
                   const updated = [...prev]
-                  updated[updated.length - 1] = { role: 'ai', text: aiText }
+                  updated[updated.length - 1] = { role: 'ai', text: currentText }
                   return updated
                 })
               }
+              await new Promise(resolve => setTimeout(resolve, 20))
             }
             if (parsed.done) {
               if (parsed.current_stage) updateNode(parsed.current_stage)
