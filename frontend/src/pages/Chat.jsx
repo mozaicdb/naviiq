@@ -27,12 +27,46 @@ function Chat() {
 
   const startSession = async () => {
     try {
-      const res = await api.post('/api/chat/message', { message: 'start' })
-      const data = res.data
-      setSessionId(data.session_id)
-      setMessages([{ role: 'ai', text: data.response }])
-      if (data.quick_replies) setQuickReplies(data.quick_replies)
-      if (data.current_stage) updateNode(data.current_stage)
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${API_BASE}/api/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: 'start' })
+      })
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let aiText = ''
+      let messageAdded = false
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n').filter(line => line.startsWith('data: '))
+
+        for (const line of lines) {
+          const jsonStr = line.replace('data: ', '')
+          try {
+            const parsed = JSON.parse(jsonStr)
+            if (parsed.token) {
+              aiText += parsed.token
+              if (!messageAdded) {
+                setMessages([{ role: 'ai', text: aiText }])
+                messageAdded = true
+              } else {
+                setMessages([{ role: 'ai', text: aiText }])
+              }
+            }
+            if (parsed.done) {
+              setSessionId(parsed.session_id)
+              if (parsed.current_stage) updateNode(parsed.current_stage)
+            }
+          } catch {}
+        }
+      }
     } catch (err) {
       setMessages([{ role: 'ai', text: 'Something went wrong. Please refresh and try again.' }])
     }
@@ -84,13 +118,51 @@ function Chat() {
     setLoading(true)
 
     try {
-      const res = await api.post('/api/chat/message', { message: userText, session_id: sessionId })
-      const data = res.data
-      setMessages((prev) => [...prev, { role: 'ai', text: data.response }])
-      if (data.quick_replies) setQuickReplies(data.quick_replies)
-      if (data.current_stage) updateNode(data.current_stage)
-      if (data.roadmap_complete) {
-        setTimeout(() => navigate(`/roadmap/${data.share_token}`), 1500)
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${API_BASE}/api/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: userText, session_id: sessionId })
+      })
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let aiText = ''
+      let messageAdded = false
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n').filter(line => line.startsWith('data: '))
+
+        for (const line of lines) {
+          const jsonStr = line.replace('data: ', '')
+          try {
+            const parsed = JSON.parse(jsonStr)
+            if (parsed.token) {
+              aiText += parsed.token
+              if (!messageAdded) {
+                setMessages((prev) => [...prev, { role: 'ai', text: aiText }])
+                messageAdded = true
+              } else {
+                setMessages((prev) => {
+                  const updated = [...prev]
+                  updated[updated.length - 1] = { role: 'ai', text: aiText }
+                  return updated
+                })
+              }
+            }
+            if (parsed.done) {
+              if (parsed.current_stage) updateNode(parsed.current_stage)
+              if (parsed.roadmap_complete) {
+                setTimeout(() => navigate(`/roadmap/${parsed.share_token}`), 1500)
+              }
+            }
+          } catch {}
+        }
       }
     } catch (err) {
       setMessages((prev) => [
