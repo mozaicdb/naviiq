@@ -11,7 +11,7 @@ import AuthCallback from './pages/AuthCallback'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 
-const API_URL = 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 function ProtectedRoute({ children }) {
   const [checking, setChecking] = useState(true)
