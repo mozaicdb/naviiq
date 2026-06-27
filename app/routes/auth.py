@@ -139,14 +139,16 @@ async def login(data: StudentLogin, response: Response):
         key="access_token",
         value=access_token,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     )
     return {
@@ -201,7 +203,8 @@ async def refresh_token(request: Request, response: Response):
         key="access_token",
         value=new_access_token,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     return {"message": "Token refreshed"}
@@ -316,17 +319,19 @@ async def google_callback(code: str, response: Response):
         key="access_token",
         value=access_token,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     )
 
     return RedirectResponse(
-        url=f"http://localhost:5173/auth/callback?access_token={access_token}&refresh_token={refresh_token}"
+        url=f"https://naviiq-frontend.onrender.com/auth/callback?access_token={access_token}&refresh_token={refresh_token}"
     )
