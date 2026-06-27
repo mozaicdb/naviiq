@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import ReactMarkdown from 'react-markdown'
 
-const API_URL = 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 function Roadmap() {
   const { shareToken } = useParams()

@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 
-const API_URL = 'http://localhost:8000'
-
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 function VerifyEmail() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
