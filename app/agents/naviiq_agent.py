@@ -403,6 +403,7 @@ STAGE 4: GOALS
 Student identity: """ + json.dumps(state.get("identity", {})) + """
 Student background: """ + json.dumps(state.get("background", {})) + """
 Student strengths: """ + json.dumps(state.get("strengths", {})) + """
+IMPORTANT: Before asking any question, check the full conversation history. If the student already answered about career focus, time available, device, or biggest fear, extract those answers and include the [DATA] block immediately without asking again.
 
 When stage is complete, include this JSON block at the end:
 [DATA]{"career_focus": "job|business|explore|not_sure", "market_focus": "local|global|not_applicable", "daily_time_available": "low|medium|high", "device": "laptop|phone|none", "biggest_fear": "value", "stage_complete": true}[/DATA]
