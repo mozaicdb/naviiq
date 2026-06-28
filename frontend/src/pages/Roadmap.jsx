@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
 
@@ -105,14 +104,67 @@ function Roadmap() {
     }
   }
 
-  const downloadPDF = async () => {
-    const element = roadmapRef.current
-    const canvas = await html2canvas(element, { scale: 2 })
-    const imgData = canvas.toDataURL('image/png')
+  const downloadPDF = () => {
     const pdf = new jsPDF('p', 'mm', 'a4')
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const margin = 15
+    const maxWidth = pageWidth - margin * 2
+    let y = 20
+
+    const addText = (text, size, bold, color) => {
+      pdf.setFontSize(size)
+      pdf.setFont('helvetica', bold ? 'bold' : 'normal')
+      pdf.setTextColor(...color)
+      const lines = pdf.splitTextToSize(text, maxWidth)
+      lines.forEach(line => {
+        if (y > 270) { pdf.addPage(); y = 20 }
+        pdf.text(line, margin, y)
+        y += size * 0.5
+      })
+      y += 3
+    }
+
+    const addSection = (title, color) => {
+      if (y > 250) { pdf.addPage(); y = 20 }
+      pdf.setFillColor(...color)
+      pdf.roundedRect(margin, y, maxWidth, 10, 2, 2, 'F')
+      pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(255, 255, 255)
+      pdf.text(title, margin + 3, y + 7)
+      y += 15
+    }
+
+    addText('NAVIIQ', 22, true, [37, 99, 235])
+    addText('Your Personalized Career Roadmap', 11, false, [100, 116, 139])
+    addText(roadmap.matched_category || '', 16, true, [15, 23, 42])
+    if (roadmap.confidence_score) {
+      addText(`${roadmap.confidence_score}% Match Confidence`, 10, false, [37, 99, 235])
+    }
+    y += 5
+
+    const sectionColors = {
+      'WHY THIS PATH FITS YOU': [37, 99, 235],
+      'JOB ROLES YOU CAN GROW INTO': [15, 23, 42],
+      'SKILLS TO LEARN IN ORDER': [20, 184, 166],
+      'YOUR LEARNING PLAN': [245, 158, 11],
+      'RECOMMENDED FREE COURSES': [124, 58, 237],
+      'FIRST PROJECT TO BUILD': [220, 38, 38],
+      'CLOSING MESSAGE': [37, 99, 235],
+    }
+
+    const parsed = parseRoadmap(roadmap.roadmap_response || '')
+
+    Object.entries(parsed).forEach(([section, lines]) => {
+      const color = sectionColors[section] || [37, 99, 235]
+      addSection(section, color)
+      lines.forEach((line, i) => {
+        const prefix = section === 'SKILLS TO LEARN IN ORDER' ? `${i + 1}. ` : ''
+        addText(prefix + line, 9, false, [15, 23, 42])
+      })
+      y += 4
+    })
+
     pdf.save('naviiq-roadmap.pdf')
   }
 
