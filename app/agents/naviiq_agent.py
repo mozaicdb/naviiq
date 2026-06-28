@@ -576,8 +576,11 @@ Match your language to the student mode: {student_mode}"""
             "messages": [{"role": "assistant", "content": clarification}]
         }
 
-    search_query = f"{decision.get('matched_category', 'tech')} career salary jobs Nigeria Africa 2025"
-    search_results = search_web(search_query)
+    matched_cat = decision.get('matched_category', 'tech')
+    salary_results = search_web(f"{matched_cat} career salary Nigeria Africa 2026")
+    course_results = search_web(f"free online courses {matched_cat} beginners 2026")
+    job_results = search_web(f"{matched_cat} job roles responsibilities Africa 2026")
+    search_results = f"SALARY DATA:\n{salary_results}\n\nFREE COURSES:\n{course_results}\n\nJOB ROLES:\n{job_results}"
 
     roadmap_state = {
         **state,
@@ -633,24 +636,41 @@ Keep it under 300 words.
 """
     else:
         output_instructions = """
-Write a personalized career guidance message.
-Include:
-1. One sentence greeting using the student name
-2. Recommended career path and why it fits them
-3. Top 3 roles they can grow into
-4. 5 key skills to learn in order
-5. A simple 4 week learning plan, one line per week
-6. 2 beginner project ideas
-7. 2 free learning resources
-Keep it under 400 words.
+Write a detailed personalized career guidance report for this student.
+Use the web search data provided to include real current information.
+
+Structure your response EXACTLY like this, using these exact section headers:
+
+## WHY THIS PATH FITS YOU
+Write 3 to 4 sentences explaining specifically why this career path matches this student based on their answers. Be personal and specific, not generic.
+
+## JOB ROLES YOU CAN GROW INTO
+List 4 job roles. For each role write the role name, a one sentence description, and the current salary range in Nigeria or Africa using the SALARY DATA provided. Format each as:
+Role Name: description. Salary: range per year.
+
+## SKILLS TO LEARN IN ORDER
+List 6 skills in the order they should be learned. For each skill write the skill name and one sentence on why it matters for this path.
+
+## YOUR LEARNING PLAN
+Write a 6 week learning plan. Each week on its own line. Format as:
+Week 1: what to focus on
+Week 2: what to focus on
+and so on.
+
+## RECOMMENDED FREE COURSES
+List 4 free courses or platforms using the FREE COURSES data provided. For each write the platform or course name and what it covers. Include the actual URL if found in the search results.
+
+## FIRST PROJECT TO BUILD
+Describe 2 beginner projects this student can build right now based on their current skill level and the tools they already know.
+
+## CLOSING MESSAGE
+Write 2 encouraging sentences addressed to the student by name.
 """
 
     search_results = state.get("search_results", "")
     search_context = f"\nCurrent web data about this career path:\n{search_results}\n" if search_results else ""
 
     system_prompt = """You are Naviiq, a career guidance AI for African students.
-
-""" + TONE_RULES + """
 
 """ + output_instructions + """
 
@@ -660,7 +680,17 @@ Student name: """ + student_name + """
 Student profile: """ + json.dumps(student_profile, indent=2) + """
 Matched path: """ + matched_category + """
 Recommendation details: """ + json.dumps(career_recommendation, indent=2) + """
-""" + search_context
+
+""" + search_context + """
+
+CRITICAL INSTRUCTIONS:
+- Use the SALARY DATA to include real current salary figures for each job role.
+- Use the FREE COURSES data to include real course names and URLs.
+- Use the JOB ROLES data to describe each role accurately.
+- Do not make up salary figures. Only use what the search data provides.
+- Follow the section structure exactly as instructed.
+- Do not add any extra sections or skip any sections.
+"""
 
     response = await call_qwen(
         system_prompt=system_prompt,
