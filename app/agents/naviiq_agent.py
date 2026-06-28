@@ -412,8 +412,7 @@ The JSON block is hidden from the student."""
 
     # Use per-stage counter
     goals_messages = state.get("goals_message_count", 0)
-    if goals_messages >= 0:
-        system_prompt += "\n\nCRITICAL INSTRUCTION: You MUST include the [DATA] block in this response. Extract career_focus, market_focus, daily_time_available, device, and biggest_fear from the conversation so far. Set stage_complete to true. Do not ask any more questions."
+    system_prompt += "\n\nCRITICAL INSTRUCTION: You MUST include the [DATA] block in this response right now. Do NOT ask any more questions. Extract career_focus, market_focus, daily_time_available, device, and biggest_fear from the full conversation history above. If any value is missing, make a reasonable inference. Set stage_complete to true."
     response = await call_qwen(
         system_prompt=system_prompt,
         user_message=last_message,
