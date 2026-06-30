@@ -13,6 +13,7 @@ import re
 import json
 import logging
 from app.tools.web_search import search_web
+from app.core.career_categories import get_categories_for_mode, REASONING_INSTRUCTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -465,29 +466,9 @@ INFRASTRUCTURE CONSTRAINT: This student has power or data limitations.
 Prioritize offline friendly, low data, text based learning paths.
 """
 
-    if student_mode == "explorer":
-        categories = "Scratch programming, coding games, robotics clubs, creative tech for kids"
-    elif student_mode == "discovery":
-        categories = """
-- Web Development basics
-- Data and Numbers
-- Design and Creativity
-- Coding and Logic
-- Digital Content Creation
-"""
-    else:
-        categories = """
-- Software Development
-- Artificial Intelligence
-- Data
-- Cloud and DevOps
-- Cybersecurity
-- Design
-- Digital Marketing and Creator Economy
-- Product and Management
-- Blockchain and Web3
-- Freelance and Entrepreneurship
-"""
+    categories_list = get_categories_for_mode(student_mode)
+    categories = "\n".join(["- " + c for c in categories_list])
+    reasoning_block = REASONING_INSTRUCTIONS if student_mode == "career" else ""
 
     system_prompt = """You are Naviiq, an expert AI career guidance system for African students.
 
@@ -497,6 +478,8 @@ Analyze the student profile and match them to the most suitable path.
 
 Available paths:
 """ + categories + """
+
+""" + reasoning_block + """
 
 """ + infrastructure_note + """
 
