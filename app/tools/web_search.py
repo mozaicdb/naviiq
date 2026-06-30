@@ -21,7 +21,8 @@ def search_web(query: str, max_results: int = 3) -> str:
         for i, result in enumerate(results, 1):
             title = result.get("title", "")
             body = result.get("body", "")
-            summary += f"{i}. {title}: {body}\n\n"
+            url = result.get("href", "")
+            summary += f"{i}. {title}: {body}\nURL: {url}\n\n"
         
         return summary.strip()
     

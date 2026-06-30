@@ -222,6 +222,7 @@ Once you have enough, include the data block.
     else:
         stage_instructions = """
 You are talking to a university student, graduate, or working professional.
+If the student is working, extract their current job, profession, or field of work from the conversation. Only ask if it was not already mentioned.
 Discover their academic background, tech exposure, and natural interests.
 Watch for mentions of wanting to switch careers or feeling stuck.
 Watch for power or data bundle limitations and set those flags.
@@ -239,7 +240,7 @@ Student identity: """ + json.dumps(identity) + """
 Current background collected: """ + json.dumps(state.get("background", {})) + """
 
 When stage is complete, include this JSON block at the end:
-[DATA]{"subjects_liked": [], "tech_experience": "value", "free_time_activities": "value", "wants_to_switch": false, "has_power_issues": false, "has_data_issues": false, "stage_complete": true}[/DATA]
+[DATA]{"current_profession": "value or null if not working", "subjects_liked": [], "tech_experience": "value", "free_time_activities": "value", "wants_to_switch": false, "has_power_issues": false, "has_data_issues": false, "stage_complete": true}[/DATA]
 
 The JSON block is hidden from the student."""
 
@@ -476,6 +477,8 @@ Prioritize offline friendly, low data, text based learning paths.
 
 Analyze the student profile and match them to the most suitable path.
 
+The student's current profession is available in student_profile.background.current_profession. Always use this field when matching. If it is present, do not ask for profession again. Set needs_more_info to false unless critical information like age or interest is completely missing.
+
 Available paths:
 """ + categories + """
 
@@ -561,9 +564,11 @@ Match your language to the student mode: {student_mode}"""
 
     matched_cat = decision.get('matched_category', 'tech')
     salary_results = search_web(f"{matched_cat} career salary Nigeria Africa 2026")
-    course_results = search_web(f"free online courses {matched_cat} beginners 2026")
+    free_course_results = search_web(f"free online courses {matched_cat} beginners 2026", max_results=7)
+    paid_course_results = search_web(f"best paid online courses {matched_cat} 2026", max_results=7)
+    youtube_results = search_web(f"{matched_cat} tutorial site:youtube.com 2026", max_results=7)
     job_results = search_web(f"{matched_cat} job roles responsibilities Africa 2026")
-    search_results = f"SALARY DATA:\n{salary_results}\n\nFREE COURSES:\n{course_results}\n\nJOB ROLES:\n{job_results}"
+    search_results = f"SALARY DATA:\n{salary_results}\n\nFREE COURSES:\n{free_course_results}\n\nPAID COURSES:\n{paid_course_results}\n\nYOUTUBE TUTORIALS:\n{youtube_results}\n\nJOB ROLES:\n{job_results}"
 
     roadmap_state = {
         **state,
@@ -641,7 +646,13 @@ Week 2: what to focus on
 and so on.
 
 ## RECOMMENDED FREE COURSES
-List 4 free courses or platforms using the FREE COURSES data provided. For each write the platform or course name and what it covers. Include the actual URL if found in the search results.
+List up to 5 free courses or platforms using the FREE COURSES data provided. Only include real ones found in the search results, do not invent extras. For each write the platform or course name and what it covers. Include the actual URL if found in the search results.
+
+## RECOMMENDED PAID COURSES
+List up to 5 paid courses or platforms using the PAID COURSES data provided. Only include real ones found in the search results, do not invent extras. For each write the platform or course name, what it covers, and the price if mentioned in the search results. Include the actual URL if found.
+
+## YOUTUBE TUTORIALS TO WATCH
+List up to 5 YouTube channels or search topics using the YOUTUBE TUTORIALS data provided. Only include real ones found in the search results, do not invent extras. For each write the channel name and what kind of content it covers, then tell the student to search that channel name on YouTube. Do not provide a direct video link.
 
 ## FIRST PROJECT TO BUILD
 Describe 2 beginner projects this student can build right now based on their current skill level and the tools they already know.
@@ -668,9 +679,11 @@ Recommendation details: """ + json.dumps(career_recommendation, indent=2) + """
 
 CRITICAL INSTRUCTIONS:
 - Use the SALARY DATA to include real current salary figures for each job role.
-- Use the FREE COURSES data to include real course names and URLs.
+- For FREE COURSES and PAID COURSES, only use entries that have a URL: line in the data. Copy that URL exactly character for character, never type it from memory or guess any part of it.
+- For YOUTUBE TUTORIALS, do not provide a direct video link. Instead, recommend the channel name or search term only, and tell the student to search for it on YouTube themselves. Never invent or guess a youtube.com/watch link.
 - Use the JOB ROLES data to describe each role accurately.
-- Do not make up salary figures. Only use what the search data provides.
+- Do not make up salary figures, course names, or URLs. Only use what the search data provides.
+- If a data section has no usable results, say so briefly instead of inventing entries.
 - Follow the section structure exactly as instructed.
 - Do not add any extra sections or skip any sections.
 """
