@@ -11,6 +11,7 @@ function Chat() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [generatingRoadmap, setGeneratingRoadmap] = useState(false)
   const [sessionId, setSessionId] = useState(null)
   const [currentNode, setCurrentNode] = useState(0)
   const [quickReplies, setQuickReplies] = useState([])
@@ -160,7 +161,8 @@ function Chat() {
             if (parsed.done) {
               if (parsed.current_stage) updateNode(parsed.current_stage)
               if (parsed.roadmap_complete) {
-                setTimeout(() => navigate(`/roadmap/${parsed.share_token}`), 1500)
+                setGeneratingRoadmap(true)
+                setTimeout(() => navigate(`/roadmap/${parsed.share_token}`), 2500)
               }
             }
           } catch {}
@@ -240,6 +242,12 @@ function Chat() {
             </div>
           </div>
         ))}
+        {generatingRoadmap && (
+          <div className="flex flex-col items-center justify-center py-8 gap-3">
+            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-blue-600 font-semibold text-sm">Generating your roadmap, please wait...</p>
+          </div>
+        )}
 
         {loading && (
           <div className="flex justify-start">
