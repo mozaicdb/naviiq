@@ -135,7 +135,7 @@ GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 
 ## Deployment
 
-Naviiq is built to run on Alibaba Cloud infrastructure, using Qwen Cloud for all AI inference.
+The frontend and backend are hosted on Render. All AI inference runs through Qwen Cloud, which operates on Alibaba Cloud infrastructure (dashscope-intl.aliyuncs.com).
 
 ## License
 
