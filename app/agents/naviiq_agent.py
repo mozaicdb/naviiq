@@ -205,6 +205,23 @@ def extract_profession_keywords(text, existing_background):
                 break
 
     return background
+
+def extract_field_of_study_keywords(text, existing_background):
+    text_lower = text.lower()
+    background = dict(existing_background) if existing_background else {}
+
+    if not background.get("field_of_study") or background.get("field_of_study") in ["university", "school", "college", None]:
+        fields = ["computer science", "software engineering", "information technology",
+                  "engineering", "business administration", "accounting", "economics",
+                  "medicine", "nursing", "law", "education", "mass communication",
+                  "biology", "chemistry", "physics", "mathematics", "statistics",
+                  "data science", "cybersecurity", "agriculture", "architecture"]
+        for field in fields:
+            if field in text_lower:
+                background["field_of_study"] = field
+                break
+
+    return background
 # Node 2: Collect Background
 
 async def collect_background(state: NaviiqState) -> NaviiqState:
@@ -253,8 +270,7 @@ Student identity: """ + json.dumps(identity) + """
 Current background collected: """ + json.dumps(state.get("background", {})) + """
 
 When stage is complete, include this JSON block at the end:
-[DATA]{"current_profession": "value or null if not working", "subjects_liked": [], "tech_experience": "value", "free_time_activities": "value", "wants_to_switch": false, "has_power_issues": false, "has_data_issues": false, "stage_complete": true}[/DATA]
-
+[DATA]{"current_profession": "value or null if not working", "field_of_study": "value or null if not a student", "subjects_liked": [], "tech_experience": "value", "free_time_activities": "value", "wants_to_switch": false, "has_power_issues": false, "has_data_issues": false, "stage_complete": true}[/DATA]
 The JSON block is hidden from the student."""
 
     # Use per-stage counter to avoid forcing completion too early
@@ -269,6 +285,7 @@ The JSON block is hidden from the student."""
     )
 
     background = extract_profession_keywords(last_message, state.get("background", {}))
+    background = extract_field_of_study_keywords(last_message, background)
     stage_complete = False
     has_power_issues = state.get("has_power_issues", False)
     has_data_issues = state.get("has_data_issues", False)
@@ -283,6 +300,8 @@ The JSON block is hidden from the student."""
             has_data_issues = extracted.get("has_data_issues", False)
         except:
             pass
+
+    background = extract_field_of_study_keywords(last_message, background)
 
     clean_response = response
     if "[DATA]" in clean_response:
@@ -534,7 +553,7 @@ Prioritize offline friendly, low data, text based learning paths.
 
 Analyze the student profile and match them to the most suitable path.
 
-The student's current profession is available in student_profile.background.current_profession. Always use this field when matching. If it is present, do not ask for profession again. Set needs_more_info to false unless critical information like age or interest is completely missing.
+The student's current profession is available in student_profile.background.current_profession, and their field of study is in student_profile.background.field_of_study. If the student is a student, use field_of_study, not current_profession. If either field is present and relevant, do not ask about profession or field of study again. Set needs_more_info to false unless critical information like age or interest is completely missing.
 
 Available paths:
 """ + categories + """
