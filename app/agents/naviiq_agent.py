@@ -191,7 +191,20 @@ Current information collected: """ + json.dumps(state.get("identity", {}))
     "identity_message_count": state.get("identity_message_count", 0) + 1,
     "messages": [{"role": "assistant", "content": clean_response}]
 }
+def extract_profession_keywords(text, existing_background):
+    text_lower = text.lower()
+    background = dict(existing_background) if existing_background else {}
 
+    if not background.get("current_profession"):
+        professions = ["nurse", "teacher", "farmer", "accountant", "engineer",
+                       "doctor", "lawyer", "trader", "student", "designer",
+                       "driver", "electrician", "banker", "civil servant"]
+        for prof in professions:
+            if prof in text_lower:
+                background["current_profession"] = prof
+                break
+
+    return background
 # Node 2: Collect Background
 
 async def collect_background(state: NaviiqState) -> NaviiqState:
@@ -255,7 +268,7 @@ The JSON block is hidden from the student."""
         conversation_history=messages[:-1]
     )
 
-    background = state.get("background", {})
+    background = extract_profession_keywords(last_message, state.get("background", {}))
     stage_complete = False
     has_power_issues = state.get("has_power_issues", False)
     has_data_issues = state.get("has_data_issues", False)
@@ -366,6 +379,43 @@ The JSON block is hidden from the student."""
         "strengths_message_count": state.get("strengths_message_count", 0) + 1,
         "messages": [{"role": "assistant", "content": clean_response}]
     }
+def extract_goals_keywords(text, existing_goals):
+    text_lower = text.lower()
+    goals = dict(existing_goals) if existing_goals else {}
+
+    if not goals.get("career_focus"):
+        if "business" in text_lower or "own initiative" in text_lower or "start my own" in text_lower:
+            goals["career_focus"] = "business"
+        elif "job" in text_lower:
+            goals["career_focus"] = "job"
+        elif "explor" in text_lower:
+            goals["career_focus"] = "explore"
+
+    if not goals.get("market_focus"):
+        if "local" in text_lower or "community" in text_lower:
+            goals["market_focus"] = "local"
+        elif "global" in text_lower or "international" in text_lower or "abroad" in text_lower:
+            goals["market_focus"] = "global"
+
+    if not goals.get("daily_time_available"):
+        if "1 hour" in text_lower or "1hr" in text_lower or "30 min" in text_lower:
+            goals["daily_time_available"] = "low"
+        elif "2 hour" in text_lower or "3 hour" in text_lower or "2-3" in text_lower:
+            goals["daily_time_available"] = "medium"
+        elif "4 hour" in text_lower or "5 hour" in text_lower or "more hours" in text_lower:
+            goals["daily_time_available"] = "high"
+
+    if not goals.get("device"):
+        if "phone" in text_lower:
+            goals["device"] = "phone"
+        elif "laptop" in text_lower:
+            goals["device"] = "laptop"
+
+    if not goals.get("biggest_fear"):
+        if "fear" in text_lower or "worried" in text_lower or "worry" in text_lower or "afraid" in text_lower:
+            goals["biggest_fear"] = text
+
+    return goals
 
 # Node 4: Define Goals
 
@@ -405,6 +455,7 @@ STAGE 4: GOALS
 Student identity: """ + json.dumps(state.get("identity", {})) + """
 Student background: """ + json.dumps(state.get("background", {})) + """
 Student strengths: """ + json.dumps(state.get("strengths", {})) + """
+Goals already collected so far: """ + json.dumps(state.get("goals", {})) + """
 IMPORTANT: Before asking any question, check the full conversation history. If the student already answered about career focus, time available, device, or biggest fear, extract those answers and include the [DATA] block immediately without asking again.
 
 When stage is complete, include this JSON block at the end:
@@ -414,14 +465,14 @@ The JSON block is hidden from the student."""
 
     # Use per-stage counter
     goals_messages = state.get("goals_message_count", 0)
-    system_prompt += "\n\nCRITICAL INSTRUCTION: You MUST include the [DATA] block in this response right now. Do NOT ask any more questions. Extract career_focus, market_focus, daily_time_available, device, and biggest_fear from the full conversation history above. If any value is missing, make a reasonable inference. Set stage_complete to true."
+    system_prompt += "\n\nCOMPLETION RULE: Ask your questions naturally, one or two at a time. Check the full history before every reply. If the student already gave enough info about their goals, or asked to proceed, skip ahead, or generate the roadmap, stop asking and include the [DATA] block now. Fill any missing field with not_specified instead of asking again. Set stage_complete to true only when you include the [DATA] block."
     response = await call_qwen(
         system_prompt=system_prompt,
         user_message=last_message,
         conversation_history=messages[:-1]
     )
 
-    goals = state.get("goals", {})
+    goals = extract_goals_keywords(last_message, state.get("goals", {}))
     stage_complete = False
 
     if "[DATA]" in response and "[/DATA]" in response:
@@ -432,6 +483,10 @@ The JSON block is hidden from the student."""
             goals = extracted
         except:
             pass
+    print("DEBUG GOALS DATA:", goals)
+    required_fields = ["career_focus", "market_focus", "daily_time_available", "device", "biggest_fear"]
+    if all(goals.get(f) for f in required_fields):
+        stage_complete = True
 
     clean_response = response
     if "[DATA]" in clean_response:
@@ -450,6 +505,7 @@ The JSON block is hidden from the student."""
 # Node 5: Decision Engine
 
 async def decision_engine(state: NaviiqState) -> NaviiqState:
+    print("DEBUG DECISION ENGINE STARTED")
     student_mode = state.get("student_mode", "career")
     student_profile = {
         "identity": state.get("identity", {}),
@@ -459,6 +515,7 @@ async def decision_engine(state: NaviiqState) -> NaviiqState:
         "has_power_issues": state.get("has_power_issues", False),
         "has_data_issues": state.get("has_data_issues", False)
     }
+    print("DEBUG BACKGROUND:", student_profile["background"])
 
     infrastructure_note = ""
     if state.get("has_power_issues") or state.get("has_data_issues"):
@@ -511,6 +568,7 @@ Return JSON only:
         if "```" in response_clean:
             response_clean = response_clean.split("```")[1].replace("json", "").strip()
         decision = json.loads(response_clean)
+        print("DEBUG DECISION:", decision)
     except:
         decision = {
             "confidence_score": 50,

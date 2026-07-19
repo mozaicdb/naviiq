@@ -315,7 +315,10 @@ async def google_callback(code: str, response: Response):
     access_token = create_access_token(student_id)
     refresh_token = create_refresh_token(student_id)
 
-    response.set_cookie(
+    redirect_response = RedirectResponse(
+        url="https://naviiq-frontend.onrender.com/auth/callback"
+    )
+    redirect_response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
@@ -323,7 +326,7 @@ async def google_callback(code: str, response: Response):
         secure=True,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
-    response.set_cookie(
+    redirect_response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
@@ -331,7 +334,4 @@ async def google_callback(code: str, response: Response):
         secure=True,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     )
-
-    return RedirectResponse(
-        url=f"https://naviiq-frontend.onrender.com/auth/callback?access_token={access_token}&refresh_token={refresh_token}"
-    )
+    return redirect_response

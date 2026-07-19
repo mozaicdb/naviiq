@@ -35,6 +35,7 @@ async def send_message(
     conversations = get_collection("conversations")
 
     session_id = data.session_id
+    print("DEBUG SESSION RECEIVED:", session_id, "STUDENT:", student_id)
     existing_state = None
 
     if session_id:

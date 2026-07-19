@@ -13,6 +13,7 @@ function Chat() {
   const [loading, setLoading] = useState(false)
   const [generatingRoadmap, setGeneratingRoadmap] = useState(false)
   const [sessionId, setSessionId] = useState(null)
+  const sessionIdRef = useRef(null)
   const [currentNode, setCurrentNode] = useState(0)
   const [quickReplies, setQuickReplies] = useState([])
   const [nodeToast, setNodeToast] = useState('')
@@ -63,6 +64,7 @@ function Chat() {
             }
             if (parsed.done) {
               setSessionId(parsed.session_id)
+              sessionIdRef.current = parsed.session_id
               if (parsed.current_stage) updateNode(parsed.current_stage)
             }
           } catch {}
@@ -124,7 +126,7 @@ function Chat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ message: userText, session_id: sessionId })
+        body: JSON.stringify({ message: userText, session_id: sessionIdRef.current })
       })
 
       const reader = response.body.getReader()
